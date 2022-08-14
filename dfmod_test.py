@@ -80,7 +80,8 @@ class Rsoft_CLI:
         p = subprocess.Popen(process_command)
         p.wait()
         #time.sleep(1)
-        os.system('taskkill /f /t /im ' + str(p.pid))
+        #in Windows no need to kill, the wait() works ok
+        #os.system('taskkill /f /t /im ' + str(p.pid))
         new_folder = self.prefix + '_work' + '//raw//'
         file_name = new_folder + self.prefix + '.ind'
         if(copy_to_root):
@@ -101,7 +102,7 @@ class Rsoft_CLI:
         for key, value in self.variable_data.items():
             cmd_dfmod.add_name_value(key, value)
         self.command = command_base + cmd_dfmod.arg_string()
-        print(self.command)
+        #print(self.command)
         #os.system(command)
 
     def add_pair(self, name, value):
