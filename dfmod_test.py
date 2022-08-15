@@ -3,6 +3,7 @@ import numpy as np
 import subprocess
 import time
 from shutil import copyfile
+from consts import *
 
 rsoft_bin = 'c:\\Synopsys\\PhotonicSolutions\\2021.09\\RSoft\\bin\\'
 path_data = 'c:\\Data\\IND\\'
@@ -142,7 +143,7 @@ class Rsoft_CLI:
         return columns, names
 
     def read_fields(self):
-        orders = 20#ConfigManager.config.harmonics
+        orders = config_harmonics #ConfigManager.config.harmonics
         axes = ['x','y','z']
 
         field_1 = np.empty([3], complex)

@@ -84,7 +84,7 @@ def rcwa_compute_single_angle(method, refractive_index, etching_depth, groove_wi
     return s4_result
 
 def rsoft_compute(refractive_index, etching_depth, groove_width, period, color, polarization, incident_angle_launch, incident_angle_theta, sidewall_angle, column_name):
-    dfmod_params = translate_polarization_params(refractive_index, etching_depth, groove_width, period, color,
+    dfmod_params = translate_rsoft_params(refractive_index, etching_depth, groove_width, period, color,
                                                  polarization, incident_angle_launch, incident_angle_theta, sidewall_angle)
     columns, values, field0, field1 = dxfmod(dfmod_params)
     out_index = values.index(column_name)
@@ -115,7 +115,7 @@ def do_not_test_calculate_first_order_transmission(initializedRcwa, refractive_i
         angles_s4.append(launch_angle)
         orders.append(first_order)
 
-    dfmod_params = translate_polarization_params(refractive_index, etching_depth, groove_width, period, color,
+    dfmod_params = translate_rsoft_params(refractive_index, etching_depth, groove_width, period, color,
                                          polarization, angles_as_list, sidewall_angle)
     columns, values = dxfmod(dfmod_params)
     out_index = values.index('10T')
@@ -136,14 +136,14 @@ def do_not_test_calculate_first_order_transmission(initializedRcwa, refractive_i
 
 
 
-def translate_polarization_params(refractive_index, etching_depth, groove_width, period, color,
+def translate_rsoft_params(refractive_index, etching_depth, groove_width, period, color,
                                     polarization: tuple, incident_angle_launch, incident_angle_theta, sidewall_angle: float, index=None):
     variable_data = dict()
     variable_data['delta1'] = refractive_index - 1
     variable_data['delta2'] = RefractiveIndices.sio2[color]-1 #0.4613#0.4586#refractive_index - 1
 
     variable_data['h1'] = etching_depth * mm_2_micron
-    variable_data['h2'] = 0.5 * mm_2_micron
+    variable_data['h2'] = 0.005 * mm_2_micron
 
     variable_data['free_space_wavelength'] = color.wavelength * mm_2_micron
     variable_data['period'] = period * mm_2_micron
@@ -163,7 +163,7 @@ def translate_polarization_params(refractive_index, etching_depth, groove_width,
     incident_angle_phi = incident_angle_theta
     variable_data['launch_angle'] = incident_angle_launch
     variable_data['launch_theta'] = incident_angle_phi
-    variable_data['rcwa_harmonics_x'] = 20#ConfigManager.config.harmonics
+    variable_data['rcwa_harmonics_x'] = config_harmonics  #ConfigManager.config.harmonics
 
     variable_data['air_in_depth'] = 0.5
     variable_data['air_out_depth'] = 0.5
@@ -188,7 +188,3 @@ def dxfmod(variable_data):
     return columns, values, field0, field1
 
 
-
-#def test_xfmod():
-#    variable_data = dict({'delta2':1})
-#    dxfmod(variable_data)

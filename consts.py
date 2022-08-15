@@ -25,6 +25,8 @@ mu = 1/1_000  # micrometer
 nm = 1/1_000_000  # nanometer
 x_sampling = 1e-3*mm
 
+config_harmonics=20
+
 
 
 
