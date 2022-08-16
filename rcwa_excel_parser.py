@@ -102,13 +102,15 @@ class Optimizer_Unitest:
 
 
 class rcwa_excel_parser:
-    def __init__(self, file_name):
+    def __init__(self, file_name, files_available):
         os.chdir(path_data)
         self.test_optimizer = Optimizer_Unitest()
         #self.rcwa = Rcwa()
         self.file_name = file_name
         self.xls = pd.ExcelFile(file_name)
-        files_available = False
+
+        #in case, the excel<->Rsoft checks are already done, and the files are available, set
+        # the files_available=True, working on the prepared resuts. The recomputation may take 1 hour
         if not files_available:
             self.process_xls()
         self.analyze()
@@ -135,13 +137,16 @@ class rcwa_excel_parser:
                 break
             for c in colors:
                 file_name = self.make_file_name(sheet_name, c)
-                with open(file_name, 'r') as file:
-                    reader = csv.DictReader(file)
-                    columns = {}
-                    for row in reader:
-                        for fieldname in reader.fieldnames:
-                            columns.setdefault(fieldname, []).append(row.get(fieldname))
-                    self.analyze_color(columns)
+                try:
+                    with open(file_name, 'r') as file:
+                        reader = csv.DictReader(file)
+                        columns = {}
+                        for row in reader:
+                            for fieldname in reader.fieldnames:
+                                columns.setdefault(fieldname, []).append(row.get(fieldname))
+                        self.analyze_color(columns)
+                except IOError:
+                    print('File '+ file_name + ' not found, consider setting files_available flag')
 
     def analyze_color(self, columns):
         self.analyze_efficiency(columns)
