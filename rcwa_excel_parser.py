@@ -8,7 +8,7 @@ import numpy as np
 from color import Color
 #from ddd.efficiency.optimizer import *
 from dfmod_test import *
-from tests.rcwa import *
+from rcwa_test import *
 from ast import literal_eval
 
 class Optimizer_Unitest:
