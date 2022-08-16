@@ -27,6 +27,10 @@ x_sampling = 1e-3*mm
 
 config_harmonics=20
 
+#TODO
+colors = [ 'red', 'green', 'blue']
+refractive_indices = [ 2.129,  2.1824 ,  2.2478 ]
+
 
 
 

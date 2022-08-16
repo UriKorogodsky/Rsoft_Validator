@@ -99,9 +99,7 @@ class Optimizer_Unitest:
     #    return np.mean(cost_main), np.std(cost_main)
 
 
-#TODO
-colors = [ 'red', 'green', 'blue']
-refractive_indices = [ 2.129,  2.1824 ,  2.2478 ]
+
 
 class rcwa_excel_parser:
     def __init__(self, file_name):
@@ -110,7 +108,9 @@ class rcwa_excel_parser:
         #self.rcwa = Rcwa()
         self.file_name = file_name
         self.xls = pd.ExcelFile(file_name)
-        #self.process_xls()
+        files_available = False
+        if not files_available:
+            self.process_xls()
         self.analyze()
 
         #plt.show(block=True)
@@ -169,9 +169,6 @@ class rcwa_excel_parser:
         #dummy operation, consider compute_field_delta or other math
         diff = s4_polarization-rs_fields_1
         return diff
-
-
-
 
 
     def make_file_name(self, sheet_name, c):
