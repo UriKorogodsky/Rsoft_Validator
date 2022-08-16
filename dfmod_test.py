@@ -79,7 +79,7 @@ class Rsoft_CLI:
     # the file into the main working folder
     def _run_rsmost_command(self, process_command, copy_to_root = True):
         p = subprocess.Popen(process_command)
-        p.wait()
+        p.wait(5)
         #time.sleep(1)
         #in Windows no need to kill, the wait() works ok
         #os.system('taskkill /f /t /im ' + str(p.pid))
@@ -115,8 +115,9 @@ class Rsoft_CLI:
         file_out = 'tmp_out.out'
         res = os.system(self.command + ' > ' + file_out)
         # if something is wrong, there is a fresh message in the file
-        # upon license avaulability, the file size is zero
+        # upon license availability, the file size is zero
         if (os.path.getsize(file_out) > 0):
+            print('License issue, please replug the dongle or restart the computer')
             fid = open(file_out, "r")
             readfile = fid.read()
             licens_problem_string = 'licensing error'
