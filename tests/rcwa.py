@@ -140,6 +140,8 @@ def translate_rsoft_params(refractive_index, etching_depth, groove_width, period
                                     polarization: tuple, incident_angle_launch, incident_angle_theta, sidewall_angle: float, index=None):
     variable_data = dict()
     variable_data['delta1'] = refractive_index - 1
+
+    #refractive index of the substrate
     variable_data['delta2'] = RefractiveIndices.sio2[color]-1 #0.4613#0.4586#refractive_index - 1
 
     variable_data['h1'] = etching_depth * mm_2_micron
