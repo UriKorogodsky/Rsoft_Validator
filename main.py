@@ -3,9 +3,9 @@ from rcwa_excel_parser import*
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    file_name = 'c:\\Data\\10Jul_1757_double_pass_with_transparency.xlsx'
+    file_name_xls = 'c:\\Data\\10Jul_1757_double_pass_with_transparency.xlsx'
     # file_name = '/home/urik/Data/16May_1800_double_pass_with_transparency.xlsx'
-    rcwa_parser = rcwa_excel_parser(file_name)
+    rcwa_parser = rcwa_excel_parser(file_name_xls)
 
     variable_data = dict({'dimension':3})
     dir_name = 'run_' + dict_to_prefix(variable_data)
