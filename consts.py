@@ -25,11 +25,12 @@ mu = 1/1_000  # micrometer
 nm = 1/1_000_000  # nanometer
 x_sampling = 1e-3*mm
 
-config_harmonics=20
+config_harmonics=50
 
 #TODO
 colors = [ 'red', 'green', 'blue']
-refractive_indices = [ 2.129,  2.1824 ,  2.2478 ]
+#refractive_indices = [ 2.129,  2.1824 ,  2.2478 ]
+#refractive_indices = [ 2.129,  1.4613 ,  2.2478 ]
 
 
 
