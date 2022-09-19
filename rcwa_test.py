@@ -32,7 +32,14 @@ class S4_inputs:
         self.__name_incident_angles_theta = 'incident_angle_theta'
         self.__name_incident_angles_phi = 'incident_angle_phi'
         self.__name_polarization_out = 'polarization_out'
-        self.__name_efficiency = 'tolerance_efficiency'
+        self.__name_efficiency = 'efficiency'
+        self.__name_tolerance_efficiency = 'tolerance_efficiency'
+
+        self.__name_groove_step_interval = 'groove_step_interval'
+        self.__name_groove_tolerance = 'groove_tolerance'
+
+        self.__name_etching_step_interval = 'etching_step_interval'
+        self.__name_etching_tolerance_percent = 'etching_tolerance_percent'
 
 
     def assign(self,  color, column_names, line_data):
@@ -53,7 +60,9 @@ class S4_inputs:
         self.incident_angle_phi = (self.get_value_by_key(self.__name_incident_angles_phi, column_names, line_data))
         incident_angles = (self.incident_angle_theta, self.incident_angle_phi)
 
-        self.s4_efficiency_in_table = self.get_value_by_key(self.__name_efficiency, column_names, line_data)
+        self.s4_efficiency = self.get_value_by_key(self.__name_efficiency, column_names, line_data)
+        self.s4_tolerance_efficiency = self.get_value_by_key(self.__name_tolerance_efficiency, column_names, line_data)
+
         self.current_color = self.get_value_by_key(self.__name_element_color_header, column_names, line_data)
 
         # fixing incosistent separators issue in vector of complex numbers
@@ -62,6 +71,12 @@ class S4_inputs:
         polarization_out_str = polarization_out_str.strip()
         polarization_out_str = polarization_out_str.replace('j', 'j,')
         self.polarization_out = np.array(literal_eval(polarization_out_str))  # [..., np.newaxis]
+
+        self.groove_step_interval = self.get_value_by_key(self.__name_groove_step_interval, column_names, line_data)
+        self.groove_tolerance = self.get_value_by_key(self.__name_groove_tolerance, column_names, line_data)
+
+        self.etching_step_interval = self.get_value_by_key(self.__name_etching_step_interval, column_names, line_data)
+        self.etching_tolerance_percent = self.get_value_by_key(self.__name_etching_tolerance_percent, column_names, line_data)
 
         return
 
@@ -205,13 +220,13 @@ def rcwa_compute_single_angle(method, refractive_index, etching_depth, groove_wi
 
 def rsoft_compute(s4_data:S4_inputs, column_name):
     dfmod_params = translate_rsoft_params(s4_data)
-    columns, values, field0, field1 = dxfmod(dfmod_params)
+    columns, values, field0, field1, tolerance_efficiency = dxfmod(dfmod_params)
     out_index = values.index(column_name)
     #angles_index = values.index('phi')
     angles_index = values.index('none')
     result_rsoft = columns[out_index]
     angles = columns[angles_index]
-    return angles, result_rsoft, field0, field1
+    return angles, result_rsoft, field0, field1, tolerance_efficiency
 
 def rsoft_compute_old(refractive_index, etching_depth, groove_width, period, color, polarization, incident_angle_launch, incident_angle_theta, sidewall_angle, column_name):
     dfmod_params = translate_rsoft_params(refractive_index, etching_depth, groove_width, period, color,
@@ -274,6 +289,12 @@ def rsoft_polarisation(polarization):
     arg_s = np.angle(s_n)
     return pol, arg_s, arg_p
 
+#provide correct output orders for efficiency
+def rsoft_output_orders(phi_deg):
+    order_sign = 2 * int(np.abs(phi_deg) > 90.0) - 1
+    range_string = str(min(0,order_sign)) + ':' + str(max(0,order_sign))
+    return range_string
+
 #def translate_rsoft_params(refractive_index, etching_depth, groove_width, period, color,
                                     #polarization: tuple, incident_angle_launch, incident_angle_theta, sidewall_angle: float, index=None):
 def translate_rsoft_params(s4_data:S4_inputs):#refractive_index, etching_depth, groove_width, period, color,
@@ -301,7 +322,12 @@ def translate_rsoft_params(s4_data:S4_inputs):#refractive_index, etching_depth, 
     #incident_angle_theta = test_range_config.incident_angle_launch.min
     #incident_angle_phi = s4_data.incident_angle_theta
     variable_data['launch_angle'] = np.rad2deg(s4_data.incident_angle_theta)# incident_angle_launch
-    variable_data['launch_theta'] = np.rad2deg(s4_data.incident_angle_phi)
+
+    phi_deg = np.rad2deg(s4_data.incident_angle_phi)
+    variable_data['launch_theta'] = phi_deg
+    variable_data['rcwa_tra_order_x'] = rsoft_output_orders(phi_deg)
+
+
     variable_data['rcwa_harmonics_x'] = config_harmonics  #ConfigManager.config.harmonics
 
     variable_data['air_in_depth'] = 0.5
@@ -323,11 +349,15 @@ def dxfmod(variable_data):
     if not rsoft_runner.compute(new_file=True):
         return None
     columns, values = rsoft_runner.read()
+    #print(columns)
+    #tolerance_efficiency = rsoft_runner.read_tolerance_efficiency()
+    tolerance_efficiency = 0# rsoft_runner.read_tolerance_efficiency()
+
     #field0, field1 = rsoft_runner.read_fields_sp()
-    field_sp = rsoft_runner.read_fields_sp()
+    field_sp = rsoft_runner.read_fields_sp(variable_data['launch_theta'])
     field_xyz = rsoft_runner.read_fields_xyz()
     field0 = field_sp[:,0]
     field1 = field_sp[:,1]
-    return columns, values, field0, field1
+    return columns, values, field0, field1, tolerance_efficiency
 
 
