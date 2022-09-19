@@ -4,6 +4,8 @@ import subprocess
 import time
 from shutil import copyfile
 from consts import *
+from datetime import *
+import psutil
 
 rsoft_bin = 'c:\\Synopsys\\PhotonicSolutions\\2021.09\\RSoft\\bin\\'
 path_data = 'c:\\Data\\IND\\'
@@ -43,18 +45,22 @@ class Rsoft_CLI:
         self.variable_data= variable_data
         self.hide = hide
 
+        #self.kill_residuals()
         #UBUNTU stuff
         #self.init_environment()
+
+    def kill_residuals(self):
+        task_name = 'rsssmpichmpd.exe'
+        for p in psutil.process_iter(attrs=['pid', 'name']):
+            if p.info['name'] == task_name:
+                os.system('taskkill /f /t /im ' + task_name)
+
 
     def compute(self, new_file):
         if(new_file):
             self.file_in = self.save_ind()
 
-        self.make_scan()
-        ######################
-        #self.configure_scan(self.file_in, 'h1', 0.5, 0.7, None, 11)
-        #self.configure_scan(self.file_in, 'width1', 0.1, 0.2, None, 5)
-        #######################
+        #self.make_scan()
 
         self.init_dfmod()
         return self.run()
@@ -63,10 +69,23 @@ class Rsoft_CLI:
         rs_field_name_width = 'width1'
         rs_field_name_height = 'h1'
 
-        self.make_scan_per_param(rs_field_name_width)
-        self.make_scan_per_param(rs_field_name_height)
+        self.make_scan_per_param_abs(rs_field_name_width)
+        self.make_scan_per_param_rel(rs_field_name_height)
 
-    def make_scan_per_param(self, param_name):
+    def make_scan_per_param_rel(self, param_name):
+        param_center = self.variable_data[param_name]
+        delta = param_center*0.1
+        step = 0.01
+        num_steps = int(delta/step)
+        delta_scan = step*num_steps
+        param_min = param_center - delta_scan
+        param_max = param_center + delta_scan
+        num_steps = 2*num_steps + 1
+
+        self.insert_scan(self.file_in, param_name, param_min, param_max, None, num_steps)
+
+
+    def make_scan_per_param_abs(self, param_name):
         param_center = self.variable_data[param_name]
         delta = 0.01
         param_min = param_center - delta
@@ -84,6 +103,7 @@ class Rsoft_CLI:
 
     def _build_rsmost_command(self):
         command_base = rsoft_bin + most_exe
+        cmd_save = command_builder(command_base)
         cmd_save = command_builder(command_base)
         #rsmost requires the filename to be before -hide
         cmd_save.add_file(self.file_in)
@@ -182,11 +202,13 @@ class Rsoft_CLI:
         #dfmod requires the filename to be before -hide
         if self.hide:
             cmd_dfmod.add_option('hide')
+        #cmd_dfmod.add_option('np8')
         cmd_dfmod.add_file(self.file_in)
         cmd_dfmod.add_name_value('prefix', self.prefix)
         #for key, value in self.variable_data.items():
         #    cmd_dfmod.add_name_value(key, value)
         self.command = command_base + cmd_dfmod.arg_string()
+        return
         #print(self.command)
         #os.system(command)
 
@@ -197,7 +219,13 @@ class Rsoft_CLI:
     def run(self):
         os.chdir(path_data)
         file_out = 'tmp_out.out'
-        res = os.system(self.command + ' > ' + file_out)
+        print('before')
+        #res = os.system(self.command + ' > ' + file_out)
+
+        p = subprocess.Popen(self.command )
+        p.wait(50)
+
+        print(datetime.now().time())
         # if something is wrong, there is a fresh message in the file
         # upon license availability, the file size is zero
         if (os.path.getsize(file_out) > 0):
@@ -227,13 +255,29 @@ class Rsoft_CLI:
             names = np.genfromtxt(file_name, names=True, max_rows=1).dtype.names
         return columns, names
 
-    def read_field(self, axe_name, harmonics ):
+
+    def read_tolerance_efficiency(self, order=1):
+        results_folder = self.prefix + '_work' + '//results//'
+        file_name = results_folder + self.prefix + '_dm_de_t_m1_0_single.dat'
+        data = np.loadtxt(file_name)
+
+        print(data)
+
+        #first column is an axis, omit it for calculations
+        measurement_data = data[:,1:]
+        average = np.mean(measurement_data)
+        print(np.mean(measurement_data))
+        return average
+
+
+
+    def read_field(self, axe_name, harmonics, order_sign = (-1) ):
         suffix = '_e' + axe_name + '_tra_coef'
         columns, names = self.read(suffix, return_names=False)
         columns = np.transpose(np.array(columns)[..., np.newaxis])
         # angles = columns[:,0]
-        index1 = 2 * harmonics - 1
         index0 = 2 * harmonics + 1
+        index1 = index0 + 2*order_sign
         rs_1 = columns[:, index1] + 1j * columns[:, index1 + 1]
         rs_0 = columns[:, index0] + 1j * columns[:, index0 + 1]
         return rs_0, rs_1
@@ -251,14 +295,15 @@ class Rsoft_CLI:
             field_0[i] = rs_0
         return field_0, field_1
 
-    def read_fields_sp(self):
+    def read_fields_sp(self, launch_theta = 0):
         orders = config_harmonics #ConfigManager.config.harmonics
         axes = ['s','p']
 
+        order_sign = 2*int(np.abs(launch_theta)>90.0)-1
         fields_sp = np.empty((2,2),complex)
         for i in range(len(axes)):
             axe = axes[i]
-            rs_0, rs_1 = self.read_field(axe, orders)
+            rs_0, rs_1 = self.read_field(axe, orders, order_sign)
             fields_sp[i,:] = [rs_0, rs_1]
         for order in range(2):
             fields_sp[:,order] /= np.linalg.norm(fields_sp[:,order])
@@ -276,7 +321,6 @@ def dict_to_prefix(dict):
 
 
 #rsoft_runner.add_pair('Period', 0.52)
-
 
 
 #rsoft_runner.run()
