@@ -50,10 +50,8 @@ class Rsoft_tester:
             runner = Rsoft_Scan_CLI(ind_file, prefix=dir_name, variable_data=variable_data, hide=True)
         return runner
 
-    def translate_to_rsoft(self, s4_data: S4_inputs):  # refractive_index, etching_depth, groove_width, period, color,
+    def translate_to_rsoft(self, s4_data: S4_inputs):
 
-        # polarization: tuple, incident_angle_launch, incident_angle_theta, sidewall_angle: float,
-        # index=None):
         variable_data = dict()
 
         variable_data['delta1'] = np.real(complex(s4_data.refractive_index)) - 1
@@ -73,9 +71,7 @@ class Rsoft_tester:
         variable_data['rcwa_launch_pol'] = pol
         variable_data['rcwa_launch_delta_phase'] = np.rad2deg(arg_p - arg_s)
 
-        # incident_angle_theta = test_range_config.incident_angle_launch.min
-        # incident_angle_phi = s4_data.incident_angle_theta
-        variable_data['launch_angle'] = np.rad2deg(s4_data.incident_angle_theta)  # incident_angle_launch
+        variable_data['launch_angle'] = np.rad2deg(s4_data.incident_angle_theta)
 
         phi_deg = np.rad2deg(s4_data.incident_angle_phi)
         variable_data['launch_theta'] = phi_deg
@@ -87,12 +83,6 @@ class Rsoft_tester:
         variable_data['air_out_depth'] = 0.5
 
         variable_data['rcwa_output_option'] = 1
-        # variable_data['rcwa_variation_step'] = 0.1#incident_angle_launch.step
-        # variable_data['rcwa_variation_min'] = incident_angle_launch#.min
-        # variable_data['rcwa_variation_max'] = incident_angle_launch#.max
-
-        # if(index is not None):
-        #    variable_data['index'] = index
 
         return variable_data
 
@@ -114,23 +104,3 @@ class Rsoft_tester:
 
     def get_theta_angle(self):
         return np.rad2deg(self.s4_data.incident_angle_phi)
-
-    def old___dxfmod(self, variable_data):
-        # rsoft_runner = Rsoft_Scan_CLI(ind_file, prefix=dir_name,  variable_data = variable_data, hide = True)
-        rsoft_runner = Rsoft_CLI(ind_file, prefix=dir_name, variable_data=variable_data, hide=True)
-        if not rsoft_runner.compute(new_file=True):
-            return None
-
-        efficiency = rsoft_runner.read_efficiency()
-
-        columns, values = rsoft_runner.read()
-        # print(columns)
-        # tolerance_efficiency = rsoft_runner.read_tolerance_efficiency()
-        tolerance_efficiency = 0  # rsoft_runner.read_tolerance_efficiency()
-
-        # field0, field1 = rsoft_runner.read_fields_sp()
-        field_sp = rsoft_runner.read_fields_sp(variable_data['launch_theta'])
-        field_xyz = rsoft_runner.read_fields_xyz()
-        field0 = field_sp[:, 0]
-        field1 = field_sp[:, 1]
-        return columns, values, field0, field1, tolerance_efficiency
