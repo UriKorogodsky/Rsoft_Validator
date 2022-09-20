@@ -12,107 +12,21 @@ from rcwa_test import *
 from ast import literal_eval
 from datetime import datetime
 from collections import namedtuple
+from Rsoft_tester import *
 
 polarization_out_header = 'polarization_out'
 rs_field_header = 'rs_field'
 #rs_field_1_header = 'rs_field_1'
 s4_efficiency_header = 'efficiency'
-
-
-class Optimizer_Unitest:
-    def __init__(self):
-        mu = 1 / 1_000  # micrometer
-        axis_spread_groove = np.linspace(-0.015, 0.015, 5) * mu
-        axis_spread_etching = np.linspace(0.95, 1.05, 5)
-        self.groove_offsets, self.etching_offsets = np.meshgrid(axis_spread_groove, axis_spread_etching)
-
-        segment_per_mm = 1
-        #super().__init__(segment_per_mm)
-
-        # We sample for values in several points so we have a big enough area with these values. because manufacturers
-        # have a certain precision they can provide
-
-    def efficiency_tolerance(self,order, refractive_index, etching_depth, groove_width, period, color_struct, polarization, incident_angles ):
-        groove_range = (self.groove_offsets + groove_width).flatten()
-        etching_range = (self.etching_offsets * etching_depth).flatten()
-
-        num_of_points = len(groove_range)
-        cost_main = np.zeros([num_of_points])
-
-        for i in range(num_of_points):
-            current_groove = groove_range[i]
-            current_etching = etching_range[i]
-
-            cost = self.get_efficiency(refractive_index=refractive_index,
-                                        etching_depth=current_etching,
-                                        groove_width=current_groove,
-                                        period=period,
-                                        color_struct=color_struct,
-                                        polarization=polarization,
-                                        incident_angles=incident_angles,
-                                        order=order)
-
-
-            #m = method(refractive_index=refractive_index,
-            #           etching_depth=current_etching,
-            #           groove_width=current_groove,
-            #           period=period,
-            #           color=color_struct,
-            #           polarization=polarization,
-            #           incident_angles=incident_angles,
-            #           sidewall_angle=0)
-            cost_main[i] = cost
-        mean_efficiency = np.mean(cost_main)
-        if(np.std(cost_main)>0.1):
-            iii=9
-        return  mean_efficiency , np.std(cost_main)
-
-    #def get_efficiency(self,order, refractive_index, etching_depth, groove_width, period, color_struct, polarization, incident_angles):
-    #    cost = self.rcwa.calculate_flux_by_order(
-    #        refractive_index=refractive_index,
-    #        etching_depth=etching_depth,
-    #        groove_width=groove_width,
-    #        period=period,
-    #        color=color_struct,
-    #        polarization=polarization,
-    #        incident_angles=incident_angles,
-    #        sidewall_angle=0,
-    #        order=order
-    #    )
-    #    return cost
-
-    #def segment_area_tolerance_efficiency(self, efficiency_method, income_ray_details: RayDetails, segment):
-    #    groove_range = (self.groove_offsets + segment.line_width).flatten()
-    #    etching_range = (self.etching_offsets * segment.etching_depth).flatten()3
-
-    #   num_of_points = len(groove_range)
-    #    cost_main = np.zeros([num_of_points])
-
-    #    for i in range(num_of_points):
-    #        current_groove = groove_range[i]
-    #        current_etching = etching_range[i]
-
-    #        m = efficiency_method(segment, income_ray_details, current_groove, current_etching)
-    #        cost_main[i] = m
-
-    #    # logger.info(
-    #    #     f"{income_ray_details.color.name} - mean: {np.mean(cost_main)}, min: {np.min(cost_main)}, "
-    #    #     f"index: {segment.refractive_index}, etching: {segment.etching_depth}, "
-    #    #     f"groove: {segment.groove_width}, period: {segment.period}, "
-    #    #     f"theta/phi: {income_ray_details.incident_angles}, s/p:{income_ray_details.polarization}"
-    #    #     f" segment: {segment.incident_point_on_element()}"
-    #    # )
-
-    #    return np.mean(cost_main), np.std(cost_main)
-
-
+s4_tolerance_efficiency_header = 'tolerance_efficiency'
 
 class rcwa_excel_comparer:
-    def __init__(self, file_name, files_available):
+    def __init__(self, file_name, files_available, scan_tolerance):
         os.chdir(path_data)
-        self.test_optimizer = Optimizer_Unitest()
+        #self.test_optimizer = Optimizer_Unitest()
         #self.rcwa = Rcwa()
         self.file_name = file_name
+        self.scan_tolerance = scan_tolerance
         self.xls = pd.ExcelFile(file_name)
 
         #in case, the excel<->Rsoft checks are already done, and the files are available, set
@@ -166,22 +80,24 @@ class rcwa_excel_comparer:
         rs_efficiency = np.array(columns['rs_efficiency']).astype(np.float)
         rs_efficiency_tolerance = np.array(columns['rs_efficiency_tolerance']).astype(np.float)
         s4_efficiency = np.array(columns[s4_efficiency_header]).astype(np.float)
+        s4_efficiency_tolerance = np.array(columns[s4_tolerance_efficiency_header]).astype(np.float)
         diff_efficiency = rs_efficiency-s4_efficiency
 
         s4_fields_str = np.array(columns[polarization_out_header])
         s4_fields = self.to_complex(s4_fields_str)
 
         thresh = 90
-        percent = np.percentile(np.abs(s4_efficiency-rs_efficiency),thresh)
+        percent = np.percentile(np.abs(diff_efficiency),thresh)
 
         plt.subplot(3, 1, 1)
         plt.title(str(thresh) + '%  <= ' + str(percent))
         plt.plot(rs_efficiency, 'r', linewidth=1)
-        plt.plot(s4_efficiency, 'g-', linewidth=1)
+        plt.plot(s4_efficiency, 'b', linewidth=1)
+        #plt.plot(s4_efficiency, 'g-', linewidth=1)
         plt.subplot(3, 1, 2)
-        plt.plot(s4_efficiency-rs_efficiency, 'g-', linewidth=1)
+        plt.plot(diff_efficiency, 'g-', linewidth=1)
         plt.subplot(3, 1, 3)
-        plt.plot(100.0*np.abs((s4_efficiency-rs_efficiency)/s4_efficiency), 'b', linewidth=1)
+        plt.plot(100.0*np.abs((diff_efficiency)/s4_efficiency), 'b', linewidth=1)
         plt.show()
 
 
@@ -251,10 +167,6 @@ class rcwa_excel_comparer:
 
         plt.show()
 
-        #dummy operation, consider compute_field_delta or other math
-        #diff = s4_polarization-rs_fields_1
-        #return diff
-
 
     def make_file_name(self, sheet_name, c):
         file_name = sheet_name + '_' + c + '.csv'
@@ -302,67 +214,9 @@ class rcwa_excel_comparer:
         return results_S4_RS
 
 
-        #results_table = np.array(results_table)[..., np.newaxis]
-        #rsoft_results = np.array(rsoft_results)[..., np.newaxis]
-        #frame = np.concatenate([rsoft_results, results_table], axis=1)
-        #the header is coupled with the structure, change accurately
-        #header = 'rsoft, s4, s4_mean, table'
-
-        #index_of_color = colors.index(color)
-        #draw = True
-        #if(draw):
-        #    plt.subplot(3, 2, 2*index_of_color+1)
-        #    #plt.plot(100.0*(np.array(results_table)-np.array(results_mean))/np.array(results_table), color[0], linewidth=1 )
-        #
-        #    plt.subplot(3, 2, 2*index_of_color+2)
-        #    plt.plot(results_table, 'k', linewidth=1 )
-        #    plt.plot(rsoft_results, color[0], linewidth=1 )
-        #return frame, header
-
-
-
-    #test delta computation , works correcyl against Igor's S4 wrapping
-    def compute_field_delta(self, rs_field, table_polarization):
-
-        paralellity = np.abs(np.cross(rs_field.T, table_polarization.T))
-        phase_difference = (np.angle(rs_field) - np.angle(table_polarization))%(2*np.pi)
-        print('Field diff= ' + str(np.linalg.norm(paralellity)) + ',' + str(np.linalg.norm(phase_difference-phase_difference[0])))
-        return
-
     def process_line(self, ray_color, column_names, line_data):
         s4_data = S4_inputs( ray_color, column_names, line_data )
-        #index_of_color = colors.index(color)
-        #refractive_index = self.get_value_by_key('refractive_index', sheet_names, line_data)
-        #refractive_index = refractive_indices;#self.get_value_by_key('refractive_index', sheet_names, line_data)
-
-        #groove_width = self.get_value_by_key('groove_width', sheet_names, line_data)
-        #etching_depth = self.get_value_by_key('etching_depth', sheet_names, line_data)
-        #period = self.get_value_by_key('period', sheet_names, line_data)
-        #color_struct = self.get_color(color)
-
-        #polarisation_name = 'polarization'
-        #polarisation_str = self.get_value_by_key(polarisation_name, sheet_names, line_data)
-        #polarization = literal_eval(polarisation_str)
-
-        #incident_angles_theta_name = 'incident_angle_theta'
-        #incident_angles_theta = (self.get_value_by_key(incident_angles_theta_name, sheet_names, line_data))
-
-        #incident_angles_phi_name = 'incident_angle_phi'
-        #incident_angles_phi = (self.get_value_by_key(incident_angles_phi_name, sheet_names, line_data))
-        #incident_angles = (incident_angles_theta, incident_angles_phi )
-
-        #s4_efficiency_in_table = self.get_value_by_key( 'tolerance_efficiency', sheet_names, line_data)
-        #current_color = self.get_value_by_key('element_color', sheet_names, line_data)
-
-        #fixing incosistent separators issue in vector of complex numbers
-        #polarization_out_str = self.get_value_by_key( polarization_out_header, sheet_names, line_data)
-        #polarization_out_str = ''.join(polarization_out_str.splitlines())
-        #polarization_out_str = polarization_out_str.strip()
-        #polarization_out_str = polarization_out_str.replace('j','j,')
-        #polarization_out = np.array(literal_eval(polarization_out_str))#[..., np.newaxis]
-
-        order = s4_data.get_order()
-        column_name = s4_data.get_test_string()
+        order = s4_data.get_order_sign()
 
         out_S4_RS = dict()
         out_S4_RS['color'] = ray_color
@@ -375,85 +229,23 @@ class rcwa_excel_comparer:
         out_S4_RS['incident_angles_theta'] = np.rad2deg(s4_data.incident_angle_theta)
         out_S4_RS['incident_angles_phi'] = np.rad2deg(s4_data.incident_angle_phi)
         out_S4_RS[polarization_out_header] = s4_data.polarization_out
-        out_S4_RS[s4_efficiency_header] = s4_data.s4_efficiency_in_table
-
-
-        compute_tolerance = False
-        mean_result = None
-        if(compute_tolerance):
-            mean_result, std_1 = self.test_optimizer.efficiency_tolerance(
-                order=order,
-                refractive_index=refractive_index,
-                etching_depth=etching_depth,
-                groove_width=groove_width,
-                period=period,
-                color_struct=color_struct,
-                polarization=polarization,
-                incident_angles=incident_angles)
+        out_S4_RS[s4_efficiency_header] = s4_data.s4_efficiency
+        out_S4_RS[s4_tolerance_efficiency_header] = s4_data.s4_tolerance_efficiency
 
         compute_rsoft_tolerance = False
         result_rsoft_mean=0
-        if  True:# not compute_rsoft_tolerance:
-            angles_rsoft, result_rsoft, field_0, field_1 = rsoft_compute(s4_data, column_name)#refractive_index, etching_depth, groove_width, period, color_struct,
-                                                       #polarization, np.rad2deg(incident_angles_theta), np.rad2deg(incident_angles_phi),
-                                                       #0, test_string)
-        if False:#else :
-            groove_step_interval = 0.000005
-            groove_tolerance = 0.00001
-            groove_elements = 2*int(groove_tolerance/groove_step_interval) + 1
 
-            #etching_step_interval = 0.000005
-            etching_step_interval = 0.00001
-            etching_tolerance_percent = 10
-            etching_tolerance = etching_depth*(etching_tolerance_percent/100.0)
-            etching_elements = 2*int(etching_tolerance/etching_step_interval)+1
+        rsoft_tester = Rsoft_tester(s4_data, scan_tolerance=self.scan_tolerance)
+        if not rsoft_tester.run():
+            print('!!!!!!!!!!!! Something went wrong, check license !!!!!!!!!!!!!!!')
+            return None
+        efficiency_rsoft = rsoft_tester.read_efficiency()
+        field_rsoft = rsoft_tester.read_field()
 
-            axis_spread_groove = groove_width + np.linspace(-groove_tolerance, groove_tolerance, groove_elements)
-            axis_spread_etching = np.linspace(etching_depth-etching_tolerance, etching_depth + etching_tolerance, etching_elements)
-            groove_offsets, etching_offsets = np.meshgrid(axis_spread_groove, axis_spread_etching)
+        field = field_rsoft[..., np.newaxis]
 
-            groove_range = groove_offsets.flatten()
-            etching_range = etching_offsets.flatten()
-
-            num_of_points = len(groove_range)
-            cost_main = np.zeros([num_of_points])
-
-            for i in range(num_of_points):
-                current_groove = groove_range[i]
-                current_etching = etching_range[i]
-                angles_rsoft, cost_rsoft, field_0_dummy, field_1_dummy = rsoft_compute(refractive_index, current_etching,
-                                                                             current_groove, period, color_struct,
-                                                                             polarization,
-                                                                             np.rad2deg(incident_angles_theta),
-                                                                             np.rad2deg(incident_angles_phi),
-                                                                             0, test_string)
-                cost_main[i] = cost_rsoft
-            result_rsoft_mean = np.mean(cost_main)
-
-        #print(s4_data.s4_efficiency_in_table, result_rsoft, result_rsoft_mean)
-        #print(datetime.now().time())
-
-        if(order == 1):
-            field = field_1
-        else:
-            field = field_0
-
-        field = field[..., np.newaxis]
-        #field_1 = field_1[..., np.newaxis]
-
-        self.compute_field_delta(rs_field=field,table_polarization=s4_data.polarization_out)
-
-        out_S4_RS['rs_efficiency'] = result_rsoft
+        out_S4_RS['rs_efficiency'] = efficiency_rsoft
         out_S4_RS['rs_efficiency_tolerance'] = result_rsoft_mean
         out_S4_RS[rs_field_header] = field
-        #out_S4_RS[rs_field_1_header] = field_1
-
-        #difff = out_S4_RS[rs_efficiency_header] - out_S4_RS[rs_field_0_header]
-
         return out_S4_RS
-        #return s4_efficiency_in_table, s4_result, mean_result
-
-    #s4_result = rcwa_compute_single_angle(method, refractive_index, etching_depth, groove_width, period, color,
-    #                                      polarization,
-    #                                      angles_as_list, sidewall_angle)
 

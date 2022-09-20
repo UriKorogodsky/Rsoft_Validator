@@ -55,45 +55,14 @@ class Rsoft_CLI:
             if p.info['name'] == task_name:
                 os.system('taskkill /f /t /im ' + task_name)
 
-
     def compute(self, new_file):
         if(new_file):
             self.file_in = self.save_ind()
 
         #self.make_scan()
 
-        self.init_dfmod()
+        self.init_command()
         return self.run()
-
-    def make_scan(self):
-        rs_field_name_width = 'width1'
-        rs_field_name_height = 'h1'
-
-        self.make_scan_per_param_abs(rs_field_name_width)
-        self.make_scan_per_param_rel(rs_field_name_height)
-
-    def make_scan_per_param_rel(self, param_name):
-        param_center = self.variable_data[param_name]
-        delta = param_center*0.1
-        step = 0.01
-        num_steps = int(delta/step)
-        delta_scan = step*num_steps
-        param_min = param_center - delta_scan
-        param_max = param_center + delta_scan
-        num_steps = 2*num_steps + 1
-
-        self.insert_scan(self.file_in, param_name, param_min, param_max, None, num_steps)
-
-
-    def make_scan_per_param_abs(self, param_name):
-        param_center = self.variable_data[param_name]
-        delta = 0.01
-        param_min = param_center - delta
-        param_max = param_center + delta
-
-        self.insert_scan(self.file_in, param_name, param_min, param_max, None, 5)
-
-
 
     def save_ind(self):
         process_command = self._build_rsmost_command()
@@ -142,7 +111,7 @@ class Rsoft_CLI:
             str_step = ' '
         else:
             str_step = str(step)
-        result = 'SYMTAB_SCALAR ' + var_name + ' Y :  IV_LINEAR_STEPS : ' + str(min)+ ' : ' + str(max) + ' : ' + str_step  + ' : ' + str(amount) + ' :  :  :\n'
+        result='SYMTAB_SCALAR '+var_name+' Y :  IV_LINEAR_STEPS : '+str(min)+' : '+str(max)+' : '+str_step+' : '+str(amount)+' :  :  :\n'
         return result
 
     def set_or_add_scan(self, lines, var_name, min, max, step, amount):
@@ -178,31 +147,16 @@ class Rsoft_CLI:
                         return num
         return None
 
+    def command_base(self):
+        return rsoft_bin + 'dfmod' + ' '
 
-    def insert_scan(self, file_name, var_name, min, max, step, amount):
-        conf = {}
-        with open(file_name) as fp:
-            lines = list()
-            in_var_section = False
-            after_var_section = False
-            for line in fp:
-                lines.append(line)
-
-            lines = self.set_or_add_scan(lines, var_name, min, max, step, amount)
-
-        f = open(file_name, "w")
-        for line in lines:
-            f.write(line)
-        f.close()
-        return
-
-    def init_dfmod(self):
-        command_base = rsoft_bin + 'dfmod' + ' '
+    def init_command(self):
+        command_base = self.command_base()
         cmd_dfmod = command_builder(command_base)
         #dfmod requires the filename to be before -hide
         if self.hide:
             cmd_dfmod.add_option('hide')
-        #cmd_dfmod.add_option('np8')
+        cmd_dfmod.add_option('np8')
         cmd_dfmod.add_file(self.file_in)
         cmd_dfmod.add_name_value('prefix', self.prefix)
         #for key, value in self.variable_data.items():
@@ -236,18 +190,16 @@ class Rsoft_CLI:
             if licens_problem_string in readfile:
                 fid.close()
                 return False
-
         return True
 
+    def read_efficiency(self, order):
+        columns, names = self._read()
+        column_name = self.get_test_string(order)
+        out_index = names.index(column_name)
+        efficiency = columns[out_index]
+        return efficiency
 
-    #def read(self):
-    #    file_name= self.prefix+'.dat'
-    #    columns = np.loadtxt(file_name, unpack = True)
-    #    names = np.genfromtxt(file_name, names=True, max_rows=1).dtype.names
-    #    return columns, names
-
-
-    def read(self, suffix='', return_names = True):
+    def _read(self, suffix='', return_names = True):
         file_name= self.prefix+suffix+'.dat'
         columns = np.loadtxt(file_name, unpack = True)
         names=None
@@ -255,10 +207,124 @@ class Rsoft_CLI:
             names = np.genfromtxt(file_name, names=True, max_rows=1).dtype.names
         return columns, names
 
+    def _order_sign(self, theta_deg):
+        return ((2 * int(np.abs(theta_deg) > 90.0) - 1))
 
-    def read_tolerance_efficiency(self, order=1):
+    #not sure, that it belongs to this class
+    def get_test_string(self, order):
+        if order == 0:
+            test_string = '00T'
+        else:
+            test_string = '10T'
+        return test_string
+
+    def _read_field(self, axe_name, harmonics, order_sign = (-1)):
+        suffix = '_e' + axe_name + '_tra_coef'
+        columns, names = self._read(suffix, return_names=False)
+        columns = np.transpose(np.array(columns)[..., np.newaxis])
+        # angles = columns[:,0]
+        index0 = 2 * harmonics + 1
+        index1 = index0 + 2*order_sign
+        rs_1 = columns[:, index1] + 1j * columns[:, index1 + 1]
+        rs_0 = columns[:, index0] + 1j * columns[:, index0 + 1]
+        return rs_0, rs_1
+
+    def read_fields_xyz(self, launch_theta = 0):
+        orders = config_harmonics #ConfigManager.config.harmonics
+        axes = ['x','y','z']
+
+        order_sign = self.__order_sign(launch_theta)
+        field_1 = np.empty([len(axes)], complex)
+        field_0 = np.empty([len(axes)], complex)
+        for i in range(len(axes)):
+            axe = axes[i]
+            rs_0, rs_1 = self._read_field(axe, orders, order_sign)
+            field_1[i] = rs_1
+            field_0[i] = rs_0
+        return field_0, field_1
+
+    def read_fields_sp(self, launch_theta = 0):
+        orders = config_harmonics #ConfigManager.config.harmonics
+        axes = ['s','p']
+
+        order_sign = self._order_sign(launch_theta)
+        fields_sp = np.empty((2,2),complex)
+        for i in range(len(axes)):
+            axe = axes[i]
+            rs_0, rs_1 = self._read_field(axe, orders, order_sign)
+            if(np.abs(rs_1) == 0):
+                rs_0, rs_1 = self._read_field(axe, orders, -order_sign)
+            fields_sp[i,:] = [rs_0, rs_1]
+        for order in range(2):
+            fields_sp[:,order] /= np.linalg.norm(fields_sp[:,order])
+        return fields_sp
+    
+class Rsoft_Scan_CLI(Rsoft_CLI):
+    def __init__(self, file_in, prefix, variable_data, hide):
+        super(Rsoft_Scan_CLI, self).__init__(file_in, prefix, variable_data, hide)
+
+    def save_ind(self):
+        self.file_in = super().save_ind()
+        self.make_scan()
+        return self.file_in
+
+    def command_base(self):
+        return rsoft_bin + 'rsmost' + ' '
+
+    def make_scan(self):
+        rs_field_name_width = 'width1'
+        rs_field_name_height = 'h1'
+
+        self.make_scan_per_param_abs(rs_field_name_width)
+        self.make_scan_per_param_rel(rs_field_name_height)
+
+    def make_scan_per_param_rel(self, param_name):
+        param_center = self.variable_data[param_name]
+        delta = param_center * 0.1
+        step = 0.01
+        num_steps = int(delta / step)
+        delta_scan = step * num_steps
+        param_min = param_center - delta_scan
+        param_max = param_center + delta_scan
+        num_steps_symmetric = 2 * num_steps + 1
+
+        self.insert_scan(self.file_in, param_name, param_min, param_max, None, num_steps_symmetric)
+
+    def make_scan_per_param_abs(self, param_name):
+        param_center = self.variable_data[param_name]
+        delta = 0.01
+        param_min = param_center - delta
+        param_max = param_center + delta
+
+        self.insert_scan(self.file_in, param_name, param_min, param_max, None, 5)
+
+    def insert_scan(self, file_name, var_name, min, max, step, amount):
+        conf = {}
+        with open(file_name) as fp:
+            lines = list()
+            in_var_section = False
+            after_var_section = False
+            for line in fp:
+                lines.append(line)
+
+            lines = self.set_or_add_scan(lines, var_name, min, max, step, amount)
+
+        f = open(file_name, "w")
+        for line in lines:
+            f.write(line)
+        f.close()
+        return
+
+    def read_efficiency(self, order):
         results_folder = self.prefix + '_work' + '//results//'
-        file_name = results_folder + self.prefix + '_dm_de_t_m1_0_single.dat'
+        if(order >= 0):
+            order_insert = str(order)
+        else:
+            order_insert = 'm'+str(abs(order))
+
+        order_suffix = '_dm_de_t_'+order_insert+'_0_single.dat'
+
+        file_name = results_folder + self.prefix + order_suffix
         data = np.loadtxt(file_name)
 
         print(data)
@@ -269,46 +335,6 @@ class Rsoft_CLI:
         print(np.mean(measurement_data))
         return average
 
-
-
-    def read_field(self, axe_name, harmonics, order_sign = (-1) ):
-        suffix = '_e' + axe_name + '_tra_coef'
-        columns, names = self.read(suffix, return_names=False)
-        columns = np.transpose(np.array(columns)[..., np.newaxis])
-        # angles = columns[:,0]
-        index0 = 2 * harmonics + 1
-        index1 = index0 + 2*order_sign
-        rs_1 = columns[:, index1] + 1j * columns[:, index1 + 1]
-        rs_0 = columns[:, index0] + 1j * columns[:, index0 + 1]
-        return rs_0, rs_1
-
-    def read_fields_xyz(self):
-        orders = config_harmonics #ConfigManager.config.harmonics
-        axes = ['x','y','z']
-
-        field_1 = np.empty([len(axes)], complex)
-        field_0 = np.empty([len(axes)], complex)
-        for i in range(len(axes)):
-            axe = axes[i]
-            rs_0, rs_1 = self.read_field(axe, orders)
-            field_1[i] = rs_1
-            field_0[i] = rs_0
-        return field_0, field_1
-
-    def read_fields_sp(self, launch_theta = 0):
-        orders = config_harmonics #ConfigManager.config.harmonics
-        axes = ['s','p']
-
-        order_sign = 2*int(np.abs(launch_theta)>90.0)-1
-        fields_sp = np.empty((2,2),complex)
-        for i in range(len(axes)):
-            axe = axes[i]
-            rs_0, rs_1 = self.read_field(axe, orders, order_sign)
-            fields_sp[i,:] = [rs_0, rs_1]
-        for order in range(2):
-            fields_sp[:,order] /= np.linalg.norm(fields_sp[:,order])
-        return fields_sp
-
 def dict_to_prefix(dict):
     string = ''
     for key, value in dict.items():
@@ -317,17 +343,3 @@ def dict_to_prefix(dict):
         string+=str(value)
         #string+='__'
     return string
-
-
-
-#rsoft_runner.add_pair('Period', 0.52)
-
-
-#rsoft_runner.run()
-#rsoft_runner.read()
-
-#a = read_file(path_data+ind_file)
-
-#command = path_bin+'dfmod.exe' + ' -hide -c -v2 ' + path_data+ind_file +  ' prefix=run2 Period=0.52 ' +  ' new_ind.ind'
-#os.system(command)
-#print('finish')

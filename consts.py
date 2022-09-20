@@ -24,8 +24,9 @@ mm = 1
 mu = 1/1_000  # micrometer
 nm = 1/1_000_000  # nanometer
 x_sampling = 1e-3*mm
+mm_2_micron=1000.0
 
-config_harmonics=50
+config_harmonics=20
 
 #TODO
 colors = [ 'red', 'green', 'blue']
