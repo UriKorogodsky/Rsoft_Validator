@@ -7,7 +7,6 @@ from consts import *
 #from tests.fixtures.ddd.rcwa import *
 from dfmod_test import *
 import matplotlib.pyplot as plt
-import inspect
 from decimal import *
 from dataclass import RefractiveIndices
 
@@ -22,7 +21,7 @@ class S4_inputs:
         self.assign(color, column_names, line_data)
 
     def _init_names_(self):
-        self.__name_color_header = 'color'
+        self.__name_color_header = 'ray_color'
         self.__name_element_color_header = 'element_color'
         self.__name_groove_width = 'groove_width'
         self.__name_etching_depth = 'etching_depth'

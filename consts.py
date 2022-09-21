@@ -3,7 +3,7 @@ from dataclasses import dataclass
 #from logger import *
 from color import *
 from numpy import sin, cos, sqrt, abs, arccos, arctan2, arcsin
-
+from collections import namedtuple
 
 def flatten(list_of_lists):
     flat_list = []
@@ -27,6 +27,9 @@ x_sampling = 1e-3*mm
 mm_2_micron=1000.0
 
 config_harmonics=20
+
+scan_config = namedtuple('scan_config', 'value,min,max,step,amount')
+
 
 #TODO
 colors = [ 'red', 'green', 'blue']

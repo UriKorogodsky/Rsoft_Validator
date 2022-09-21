@@ -43,12 +43,48 @@ class Rsoft_tester:
         return field1
 
     def create_rsoft_runner(self,variable_data, scan_tolerance):
-        dir_name = 'run_test'  # + dict_to_prefix(variable_data)
+        dir_name = 'run_test'
         if not scan_tolerance:
             runner = Rsoft_CLI(ind_file, prefix=dir_name, variable_data=variable_data, hide=True)
         else:
-            runner = Rsoft_Scan_CLI(ind_file, prefix=dir_name, variable_data=variable_data, hide=True)
+            tolerances = self.translate_tolerances(self.s4_data)
+            runner = Rsoft_Scan_CLI(ind_file, prefix=dir_name, variable_data=variable_data, hide=True, tolerances = tolerances)
         return runner
+
+    #range: if relative is False, is range of scan one way,
+    #       if relative is True, range of scan in percents (divided by 100 inside the function)
+    def compute_tolerance(self, step, range, value, relative):
+        if not relative:
+            abs_range = range
+        else:
+            abs_range = value*(range/100.0)
+        amount_one_side = int(np.round(abs_range/step))
+        int_range = step*amount_one_side
+        _min = value-int_range
+        _max = value+int_range
+        _amount = 2*amount_one_side+1
+        tolerence = scan_config(value*mm_2_micron,_min*mm_2_micron,_max*mm_2_micron,step*mm_2_micron,_amount)
+        return tolerence
+
+
+    def translate_tolerances(self, s4_data: S4_inputs):
+        tolerance_data = dict()
+        groove_width_tolerance = \
+            self.compute_tolerance( step=self.s4_data.groove_step_interval,
+                                    range = self.s4_data.groove_tolerance,
+                                    value=(s4_data.period - s4_data.groove_width),
+                                    relative=False)
+
+        etching_depth_tolerance = \
+            self.compute_tolerance( step=self.s4_data.etching_step_interval,
+                                    range = self.s4_data.etching_tolerance_percent,
+                                    value = self.s4_data.etching_depth,
+                                    relative=True)
+
+        tolerance_data['width1'] = groove_width_tolerance
+        tolerance_data['h1'] = etching_depth_tolerance
+        return tolerance_data
+
 
     def translate_to_rsoft(self, s4_data: S4_inputs):
 

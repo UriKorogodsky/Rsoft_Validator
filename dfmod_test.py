@@ -260,8 +260,9 @@ class Rsoft_CLI:
         return fields_sp
     
 class Rsoft_Scan_CLI(Rsoft_CLI):
-    def __init__(self, file_in, prefix, variable_data, hide):
+    def __init__(self, file_in, prefix, variable_data, hide, tolerances):
         super(Rsoft_Scan_CLI, self).__init__(file_in, prefix, variable_data, hide)
+        self.tolerances = tolerances
 
     def save_ind(self):
         self.file_in = super().save_ind()
@@ -272,31 +273,17 @@ class Rsoft_Scan_CLI(Rsoft_CLI):
         return rsoft_bin + 'rsmost' + ' '
 
     def make_scan(self):
-        rs_field_name_width = 'width1'
-        rs_field_name_height = 'h1'
+        for param_name in self.tolerances.keys():
+            self.make_scan_per_param(param_name,self.tolerances[param_name] )
+        return
 
-        self.make_scan_per_param_abs(rs_field_name_width)
-        self.make_scan_per_param_rel(rs_field_name_height)
-
-    def make_scan_per_param_rel(self, param_name):
-        param_center = self.variable_data[param_name]
-        delta = param_center * 0.1
-        step = 0.01
-        num_steps = int(delta / step)
-        delta_scan = step * num_steps
-        param_min = param_center - delta_scan
-        param_max = param_center + delta_scan
-        num_steps_symmetric = 2 * num_steps + 1
-
-        self.insert_scan(self.file_in, param_name, param_min, param_max, None, num_steps_symmetric)
-
-    def make_scan_per_param_abs(self, param_name):
+    def make_scan_per_param(self, param_name, param_scan:scan_config):
         param_center = self.variable_data[param_name]
         delta = 0.01
         param_min = param_center - delta
         param_max = param_center + delta
 
-        self.insert_scan(self.file_in, param_name, param_min, param_max, None, 5)
+        self.insert_scan(self.file_in, param_name, param_scan.min, param_scan.max, None, param_scan.amount)
 
     def insert_scan(self, file_name, var_name, min, max, step, amount):
         conf = {}
@@ -334,12 +321,3 @@ class Rsoft_Scan_CLI(Rsoft_CLI):
         average = np.mean(measurement_data)
         print(np.mean(measurement_data))
         return average
-
-def dict_to_prefix(dict):
-    string = ''
-    for key, value in dict.items():
-        string+=key
-        string+='_'
-        string+=str(value)
-        #string+='__'
-    return string

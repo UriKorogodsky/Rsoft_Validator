@@ -11,7 +11,7 @@ from dfmod_test import *
 from rcwa_test import *
 from ast import literal_eval
 from datetime import datetime
-from collections import namedtuple
+
 from Rsoft_tester import *
 
 polarization_out_header = 'polarization_out'
@@ -43,7 +43,6 @@ class rcwa_excel_comparer:
 
             print(sheet_name + ' start')
             plt.clf()
-            plt.title(sheet_name)
 
             sheet = self.process_sheet(sheet_name)
 
@@ -67,21 +66,20 @@ class rcwa_excel_comparer:
                         for row in reader:
                             for fieldname in reader.fieldnames:
                                 columns.setdefault(fieldname, []).append(row.get(fieldname))
-                        plt.title(sheet_name)
-                        self.analyze_color(columns)
+                        self.analyze_color(columns, c, sheet_name)
                 except IOError:
                     print('File '+ file_name + ' not found, consider setting files_available flag')
 
-    def analyze_color(self, columns):
-        self.analyze_efficiency(columns)
-        self.analyze_fields(columns)
+    def analyze_color(self, columns, color, sheet_name):
+        self.analyze_efficiency(columns, color, sheet_name)
+        self.analyze_fields(columns, color, sheet_name)
 
-    def analyze_efficiency(self, columns):
+    def analyze_efficiency(self, columns, color, sheet_name):
         rs_efficiency = np.array(columns['rs_efficiency']).astype(np.float)
         rs_efficiency_tolerance = np.array(columns['rs_efficiency_tolerance']).astype(np.float)
         s4_efficiency = np.array(columns[s4_efficiency_header]).astype(np.float)
         s4_efficiency_tolerance = np.array(columns[s4_tolerance_efficiency_header]).astype(np.float)
-        diff_efficiency = rs_efficiency-s4_efficiency
+        diff_efficiency = rs_efficiency-s4_efficiency_tolerance
 
         s4_fields_str = np.array(columns[polarization_out_header])
         s4_fields = self.to_complex(s4_fields_str)
@@ -89,10 +87,12 @@ class rcwa_excel_comparer:
         thresh = 90
         percent = np.percentile(np.abs(diff_efficiency),thresh)
 
+        fig, ax = plt.subplots(3, 1)
+        plt.suptitle('Efficiency\n Component: '+ sheet_name +'\n Color: ' + color )
         plt.subplot(3, 1, 1)
         plt.title(str(thresh) + '%  <= ' + str(percent))
-        plt.plot(rs_efficiency, 'r', linewidth=1)
-        plt.plot(s4_efficiency, 'b', linewidth=1)
+        plt.plot(rs_efficiency, 'r', linewidth=3)
+        plt.plot(s4_efficiency_tolerance, 'b', linewidth=1)
         #plt.plot(s4_efficiency, 'g-', linewidth=1)
         plt.subplot(3, 1, 2)
         plt.plot(diff_efficiency, 'g-', linewidth=1)
@@ -111,7 +111,7 @@ class rcwa_excel_comparer:
         complex_array = np.array(complex_array)
         return complex_array
 
-    def analyze_fields(self, columns):
+    def analyze_fields(self, columns, color, sheet_name):
         ##########################################
         #get bad line
         d_items = columns.keys()
@@ -127,6 +127,9 @@ class rcwa_excel_comparer:
         rs_fields = np.squeeze(self.to_complex(columns['rs_field']))
 
         thresh = 90
+
+        fig, ax = plt.subplots(2, 1)
+        plt.suptitle('Fields\n Component: '+ sheet_name +'\n Color: ' + color )
         plt.subplot(2,1,1)
         plt.plot(np.abs(rs_fields[:,0]),'r')
         plt.plot(np.abs(s4_polarization_out[:,0]),'g')
@@ -138,6 +141,8 @@ class rcwa_excel_comparer:
         plt.plot(np.abs(s4_polarization_out[:,1]),'b')
         percent_p = np.percentile(np.abs(np.abs(rs_fields[:,1]) - np.abs(s4_polarization_out[:,1])), thresh)
         plt.title('P: '+ str(thresh) + '% <= ' + str(percent_p))
+
+        plt.show()
 
         #angles_phi = np.squeeze(self.to_complex(columns['incident_angles_theta']))
         #s4_polarization_s = self.to_complex(columns['polarisation_s'])
@@ -165,7 +170,7 @@ class rcwa_excel_comparer:
         #phase_diffs = s4_difference-rs_difference
         #plt.plot(phase_diffs, 'g.', linewidth=1)
 
-        plt.show()
+
 
 
     def make_file_name(self, sheet_name, c):
@@ -200,7 +205,7 @@ class rcwa_excel_comparer:
 
     def process_color(self, ray_color, column_names, matrix):
         results_S4_RS = list()
-        step_lines = 1
+        step_lines = 50
         for line_index in range(0,len(matrix),step_lines):
             line_data = matrix[line_index]
             #if(np.isnan(line_data[0]) or line_data[0] == 0):
