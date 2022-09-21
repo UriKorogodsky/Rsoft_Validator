@@ -22,6 +22,9 @@ s4_tolerance_efficiency_header = 'tolerance_efficiency'
 
 class rcwa_excel_comparer:
     def __init__(self, file_name, files_available, scan_tolerance):
+
+        Rsoft_tester.kill_residuals()
+
         os.chdir(path_data)
         #self.test_optimizer = Optimizer_Unitest()
         #self.rcwa = Rcwa()

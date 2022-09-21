@@ -140,3 +140,11 @@ class Rsoft_tester:
 
     def get_theta_angle(self):
         return np.rad2deg(self.s4_data.incident_angle_phi)
+
+    @staticmethod
+    def kill_residuals():
+        task_names = ['rsssmpichmpd.exe', 'dfmod.exe']
+        for name in task_names:
+            for p in psutil.process_iter(attrs=['pid', 'name']):
+                if p.info['name'] == name:
+                    os.system('taskkill /f /t /im ' + name)

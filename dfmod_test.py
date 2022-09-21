@@ -49,12 +49,6 @@ class Rsoft_CLI:
         #UBUNTU stuff
         #self.init_environment()
 
-    def kill_residuals(self):
-        task_names = ['rsssmpichmpd.exe', 'dfmod.exe']
-        for name in task_names:
-            for p in psutil.process_iter(attrs=['pid', 'name']):
-                if p.info['name'] == name:
-                    os.system('taskkill /f /t /im ' + name)
 
     def compute(self, new_file):
         if(new_file):
@@ -309,7 +303,7 @@ class Rsoft_Scan_CLI(Rsoft_CLI):
         file_name = results_folder + self.prefix + order_suffix
         data = np.loadtxt(file_name)
 
-        print(data)
+        #print(data)
 
         #first column is an axis, omit it for calculations
         measurement_data = data[:,1:]

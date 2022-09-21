@@ -1,0 +1,180 @@
+
+air_in_depth = 0.5
+air_out_depth = 0.5
+alpha = 0
+arc_wavelength = 0.52
+background_index = 1
+boundary_max = period/2
+boundary_max_y = period/2
+boundary_min = -period/2
+boundary_min_y = -period/2
+cad_aspectratio = 1
+cad_aspectratio_y = 1
+cover_index = 1
+delta = 0
+delta1 = 1.1824
+delta2 = 0.4613
+delta_arc1 = 1.457^0.75-1
+delta_arc2 = 0.2
+dimension = 3
+domain_max = h1+h2+h_arc1+h_arc2+air_out_depth
+domain_min = -air_in_depth
+eim = 0
+free_space_wavelength = 0.52
+h1 = 1.07014
+h2 = 500
+h_arc1 = 0.25*arc_wavelength/(1+delta_arc1)
+h_arc2 = 0.25*arc_wavelength/(1+delta_arc2)
+height = width
+index_display_mode = DISPLAY_CONTOURMAPXZ
+k0 = (2*pi)/free_space_wavelength
+launch_angle = 49.9
+launch_theta = 12.66203238
+launch_tilt = 1
+period = 0.42945
+prefix = arc_sd1_18w052
+rcwa_harmonics_x = 50
+rcwa_harmonics_y = 0
+rcwa_incidence_convention = 1
+rcwa_index_res_z = 1
+rcwa_launch_delta_phase = 0
+rcwa_launch_pol = 41.97909576
+rcwa_output_diff_trans = 1
+rcwa_output_e_coef = 1
+rcwa_output_option = 1
+rcwa_output_e_coef_ps = 1
+rcwa_reference_plane_dm = 1
+rcwa_tra_order_x = -1:0
+rcwa_variation_max = 60
+rcwa_variation_min = 10
+rcwa_variation_step = 0.1
+sim_tool = ST_DIFFRACTMOD
+slice_position_z = 0.6
+structure = STRUCT_CHANNEL
+width = 1
+width1 = 0.24213
+width2 = 1.1*period
+
+
+segment 1
+	color = 6
+	begin.x = 0
+	begin.z = 0
+	begin.height = width2
+	begin.width = width1
+	begin.delta = delta1
+	end.x = 0 rel begin segment 1
+	end.y = 0 rel begin segment 1
+	end.z = h1 rel begin segment 1
+	end.height = width2
+	end.width = width1
+	end.delta = delta1
+end segment
+
+segment 2
+	structure = STRUCT_CHANNEL
+	color = 10
+	begin.x = 0
+	begin.z = h1 rel begin segment 1
+	begin.height = width2
+	begin.width = width2
+	begin.delta = delta2
+	begin.alpha = 0
+	end.x = 0
+	end.y = 0 rel end segment 1
+	end.z = h2 rel end segment 1
+	end.height = width2
+	end.width = width2
+	end.delta = delta2
+	end.alpha = 0
+end segment
+
+segment 3
+	color = 9
+	extended = 1
+	position_taper = TAPER_LINEAR
+	begin.x = 0
+	begin.z = 0 rel end segment 2
+	begin.height = width2
+	begin.width = width2
+	begin.delta = delta_arc1
+	begin.alpha = 0
+	end.x = 0
+	end.z = h_arc1 rel begin segment 3
+	end.height = width2
+	end.width = width2
+	end.delta = delta_arc1
+	end.alpha = 0
+end segment
+
+segment 4
+	color = 12
+	extended = 1
+	begin.x = 0
+	begin.z = 0 rel end segment 3
+	begin.height = width2
+	begin.width = width2
+	begin.delta = delta_arc2
+	begin.alpha = 0
+	end.x = 0
+	end.z = h_arc2 rel begin segment 4
+	end.height = width2
+	end.width = width2
+	end.delta = delta_arc2
+	end.alpha = 0
+end segment
+
+
+
+
+
+text_block 1
+	name = MOST
+	text =
+RSScanOptFormat1
+
+[MODE]
+SCAN
+
+PREFIX run_test
+PREFIX_STYLE 0
+CLUSTER 0 0 0 0 1 ""
+USERSIM_CALLSTYLE 0 0
+
+[SIMULATION]
+SIMTOOL ST_DEFAULT
+WINDOW_SIZE 0
+VERBOSITY 0
+PRE_WHOLE_CMD
+POST_WHOLE_CMD
+PRE_CMD
+POST_CMD
+PREPOST_ACTIVE 0
+PREPOST_ERRCODES 0
+EXTRA_DATAINDEX_CMDS
+
+[ALGORITHM]
+NAME root_1d_brent
+MAXSTEPS DEFAULT  1000
+CONVERGENCE DEFAULT  1.0e-7
+
+[INDEPENDENT_VARIABLES_SCAN]
+IV_Declarations
+SYMTAB_SCALAR background_index Y :  IV_LINEAR_STEPS : 1 : 1 :  : 1 :  :  :
+
+[INDEPENDENT_VARIABLES_OPT]
+IV_Declarations
+
+IV_InitialValues
+
+[MEASUREMENTS:ST_DIFFRACTMOD]
+STANDARD dm_de_r_0_vs_phi Y
+STANDARD dm_de_r_m1_vs_phi Y
+STANDARD dm_de_t_0_vs_phi Y
+STANDARD dm_de_t_m1_vs_phi Y
+
+[METRICS]
+
+	end text
+end text_block
+
