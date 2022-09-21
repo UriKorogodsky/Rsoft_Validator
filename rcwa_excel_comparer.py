@@ -205,7 +205,7 @@ class rcwa_excel_comparer:
 
     def process_color(self, ray_color, column_names, matrix):
         results_S4_RS = list()
-        step_lines = 50
+        step_lines = 1
         for line_index in range(0,len(matrix),step_lines):
             line_data = matrix[line_index]
             #if(np.isnan(line_data[0]) or line_data[0] == 0):
