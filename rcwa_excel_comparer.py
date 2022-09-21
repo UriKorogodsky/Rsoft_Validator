@@ -214,7 +214,8 @@ class rcwa_excel_comparer:
 
             results_S4_RS.append( out_S4_RS)
             if(line_index%10 == 0):
-                print(str(line_index) + '/' + str(len(matrix)))
+                time_str = str(datetime.now().time())
+                print(time_str + ' : ' + str(line_index) + '/' + str(len(matrix)))
 
         return results_S4_RS
 

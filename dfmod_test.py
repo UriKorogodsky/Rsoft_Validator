@@ -50,10 +50,11 @@ class Rsoft_CLI:
         #self.init_environment()
 
     def kill_residuals(self):
-        task_name = 'rsssmpichmpd.exe'
-        for p in psutil.process_iter(attrs=['pid', 'name']):
-            if p.info['name'] == task_name:
-                os.system('taskkill /f /t /im ' + task_name)
+        task_names = ['rsssmpichmpd.exe', 'dfmod.exe']
+        for name in task_names:
+            for p in psutil.process_iter(attrs=['pid', 'name']):
+                if p.info['name'] == name:
+                    os.system('taskkill /f /t /im ' + name)
 
     def compute(self, new_file):
         if(new_file):
@@ -173,13 +174,12 @@ class Rsoft_CLI:
     def run(self):
         os.chdir(path_data)
         file_out = 'tmp_out.out'
-        print('before')
         #res = os.system(self.command + ' > ' + file_out)
 
         p = subprocess.Popen(self.command )
         p.wait(50)
 
-        print(datetime.now().time())
+
         # if something is wrong, there is a fresh message in the file
         # upon license availability, the file size is zero
         if (os.path.getsize(file_out) > 0):
@@ -278,11 +278,6 @@ class Rsoft_Scan_CLI(Rsoft_CLI):
         return
 
     def make_scan_per_param(self, param_name, param_scan:scan_config):
-        param_center = self.variable_data[param_name]
-        delta = 0.01
-        param_min = param_center - delta
-        param_max = param_center + delta
-
         self.insert_scan(self.file_in, param_name, param_scan.min, param_scan.max, None, param_scan.amount)
 
     def insert_scan(self, file_name, var_name, min, max, step, amount):
@@ -303,7 +298,7 @@ class Rsoft_Scan_CLI(Rsoft_CLI):
         return
 
     def read_efficiency(self, order):
-        results_folder = self.prefix + '_work' + '//results//'
+        results_folder = self.prefix + '_work//results//'
         if(order >= 0):
             order_insert = str(order)
         else:

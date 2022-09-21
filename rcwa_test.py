@@ -13,12 +13,14 @@ from dataclass import RefractiveIndices
 #setups the range of test, incluting the last value
 #from rcwa_excel_comparer import S4_inputs
 from ast import literal_eval
+import inspect
 
 class S4_inputs:
     def __init__(self, color, column_names, line_data):
         self._init_names_()
         self.color = color
         self.assign(color, column_names, line_data)
+        self.save_s4('s4_values.txt')
 
     def _init_names_(self):
         self.__name_color_header = 'ray_color'
@@ -69,7 +71,7 @@ class S4_inputs:
         polarization_out_str = ''.join(polarization_out_str.splitlines())
         polarization_out_str = polarization_out_str.strip()
         polarization_out_str = polarization_out_str.replace('j', 'j,')
-        self.polarization_out = np.array(literal_eval(polarization_out_str))  # [..., np.newaxis]
+        self.polarization_out = np.array(literal_eval(polarization_out_str)).T  # [..., np.newaxis]
 
         self.groove_step_interval = self.get_value_by_key(self.__name_groove_step_interval, column_names, line_data)
         self.groove_tolerance = self.get_value_by_key(self.__name_groove_tolerance, column_names, line_data)
@@ -78,6 +80,18 @@ class S4_inputs:
         self.etching_tolerance_percent = self.get_value_by_key(self.__name_etching_tolerance_percent, column_names, line_data)
 
         return
+
+    def save_s4(self, file_name):
+        f = open(file_name, "w")
+        for i in inspect.getmembers(self):
+            # to remove private and protected
+            # functions
+            if not i[0].startswith('_'):
+                # To remove other methods that
+                # doesnot start with a underscore
+                if not inspect.ismethod(i[1]):
+                    f.write(str(i[0])+'='+str(i[1])+'\n')
+        f.close()
 
         #self.groove_width = 0.00023;
         #self.etching_depth = 0.00014;

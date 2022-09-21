@@ -11,4 +11,4 @@ if __name__ == '__main__':
 
     # in case, the excel<->Rsoft checks are already done, and the files are available, set
     # the files_available=True, working on the prepared resuts. The recomputation may take 1 hour
-    rcwa_comparer = rcwa_excel_comparer(file_name_xls, files_available=True, scan_tolerance=True)
+    rcwa_comparer = rcwa_excel_comparer(file_name_xls, files_available=False, scan_tolerance=False)
